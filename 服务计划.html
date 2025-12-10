@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>档案管理平台 - 服务计划记录接收</title>
+  <!-- 引入外部资源 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  
+  <style>
+    /* 复用原有样式 */
+    body { font-family: "微软雅黑", "思源黑体", sans-serif; background-color: #f5f7fa; color: #333; margin: 0; padding: 0; }
+    .btn-primary { background-color: #1890FF; border-color: #1890FF; }
+    .btn-primary:hover { background-color: #096DD9; border-color: #096DD9; }
+    .btn-outline-secondary { border-color: #ddd; color: #666; }
+    .btn-outline-secondary:hover { background-color: #f5f5f5; border-color: #ccc; }
+    .btn-danger { background-color: #FF4D4F; border-color: #FF4D4F; }
+    .btn-danger:hover { background-color: #d9363e; border-color: #d9363e; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-header { background: #fff; border-bottom: 1px solid #f0f0f0; border-radius: 12px 12px 0 0; padding: 15px 20px; font-weight: 600; font-size: 15px; }
+    .card-body { padding: 20px; }
+    .badge { font-size: 12px; }
+
+    /* 布局样式复用 */
+    .app-container { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #fff; box-shadow: 1px 0 2px rgba(0,0,0,0.05); padding: 20px 0; flex-shrink: 0; }
+    .sidebar-logo { text-align: center; padding: 0 20px 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; }
+    .sidebar-logo img { height: 40px; margin-bottom: 8px; }
+    .sidebar-logo h3 { font-size: 16px; color: #1890FF; font-weight: 600; margin: 0; }
+    .nav-menu { list-style: none; padding: 0; margin: 0; }
+    .nav-item { margin-bottom: 4px; }
+    .nav-link { display: flex; align-items: center; padding: 12px 20px; color: #666; text-decoration: none; font-size: 14px; border-left: 3px solid transparent; }
+    .nav-link:hover, .nav-link.active { color: #1890FF; background-color: #f0f7ff; border-left: 3px solid #1890FF; }
+    .nav-link i { font-size: 18px; margin-right: 12px; width: 20px; text-align: center; }
+    .nav-group-title { padding: 15px 20px 5px; font-size: 12px; color: #999; font-weight: 500; }
+
+    /* 主内容区复用+新增 */
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-title { font-size: 20px; font-weight: 600; color: #333; margin: 0; }
+    .user-info { display: flex; align-items: center; }
+    .notification { position: relative; margin-right: 20px; cursor: pointer; }
+    .notification i { font-size: 20px; color: #666; }
+    .notification-badge { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #FF4D4F; color: #fff; border-radius: 50%; font-size: 12px; text-align: center; line-height: 18px; }
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1890FF; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; margin-right: 10px; }
+    .user-name { font-size: 14px; font-weight: 500; }
+
+    /* 新增：接收确认页面样式 */
+    .filter-bar { background: #fff; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+    .filter-item { flex: 1; min-width: 180px; }
+    .filter-item label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .filter-item select, .filter-item input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .filter-actions { display: flex; gap: 10px; align-items: flex-end; }
+    
+    .receive-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+    .receive-table th, .receive-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+    .receive-table th { background-color: #f8f9fa; font-weight: 600; font-size: 14px; }
+    .receive-table tbody tr:hover { background-color: #f9f9f9; }
+    
+    .status-pending { color: #FAAD14; }
+    .status-archived { color: #52C41A; }
+    .status-rejected { color: #FF4D4F; }
+    .status-overdue { color: #FF4D4F; font-weight: 600; }
+    .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .status-tag-pending { background: #fff7e6; color: #FAAD14; }
+    .status-tag-archived { background: #f6ffed; color: #52C41A; }
+    .status-tag-rejected { background: #fff2f0; color: #FF4D4F; }
+    
+    .action-buttons { display: flex; gap: 5px; }
+    .btn-xs { padding: 2px 8px; font-size: 12px; }
+    
+    .pagination { display: flex; justify-content: center; align-items: center; margin-top: 20px; gap: 5px; }
+    .pagination-btn { width: 36px; height: 36px; border-radius: 4px; border: 1px solid #ddd; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .pagination-btn.active { background: #1890FF; color: #fff; border-color: #1890FF; }
+    .pagination-btn.disabled { color: #ccc; cursor: not-allowed; }
+    
+    .bottom-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    
+    /* 预览弹窗样式 */
+    .preview-content { display: flex; flex-direction: column; gap: 20px; }
+    .preview-meta { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+    .meta-item { display: flex; margin-bottom: 8px; }
+    .meta-label { width: 80px; font-weight: 500; color: #666; }
+    .meta-value { flex: 1; }
+    .preview-image { text-align: center; }
+    .preview-image img { max-width: 100%; border-radius: 4px; cursor: zoom-in; }
+    
+    /* 退回原因弹窗样式 */
+    .reason-textarea { width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; margin-bottom: 15px; }
+    .reason-count { text-align: right; font-size: 12px; color: #999; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边导航 -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <img src="https://via.placeholder.com/80x40?text=居家长护" alt="系统Logo">
+        <h3>档案管理平台</h3>
+      </div>
+      
+      <div class="nav-group-title">档案管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-search"></i>
+            <span>电子档案查询</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-camera"></i>
+            <span>档案材料录入</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link active">
+            <i class="fa fa-check-circle"></i>
+            <span>服务计划记录接收</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-check-square-o"></i>
+            <span>档案合规检查</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-download"></i>
+            <span>档案导出管理</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-group-title">系统管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-user"></i><span>用户管理</span></a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-cog"></i><span>系统设置</span></a></li>
+      </ul>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 顶部导航 -->
+      <div class="top-nav">
+        <h1 class="page-title">服务计划和服务记录接收确认</h1>
+        <div class="user-info">
+          <div class="notification">
+            <i class="fa fa-bell-o"></i>
+            <span class="notification-badge">3</span>
+          </div>
+          <div class="user-avatar">档</div>
+          <div class="user-name">档案管理员</div>
+        </div>
+      </div>
+
+      <!-- 筛选区域 -->
+      <div class="filter-bar">
+        <div class="filter-item">
+          <label>材料类型</label>
+          <select id="materialType">
+            <option value="">全部类型</option>
+            <option value="service_plan">服务计划</option>
+            <option value="service_record">服务记录</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>提交时间</label>
+          <input type="date" id="startDate" placeholder="开始日期">
+        </div>
+        <div class="filter-item">
+          <label>至</label>
+          <input type="date" id="endDate" placeholder="结束日期">
+        </div>
+        <div class="filter-item">
+          <label>护理员</label>
+          <select id="nurse">
+            <option value="">全部护理员</option>
+            <option value="nurse1">张护理员</option>
+            <option value="nurse2">李护理员</option>
+            <option value="nurse3">王护理员</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>材料状态</label>
+          <select id="materialStatus">
+            <option value="">全部状态</option>
+            <option value="pending">待确认</option>
+            <option value="archived">已归档</option>
+            <option value="rejected">已退回</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary">
+            <i class="fa fa-search"></i> 查询
+          </button>
+          <button class="btn btn-outline-secondary">
+            <i class="fa fa-refresh"></i> 重置
+          </button>
+        </div>
+      </div>
+
+      <!-- 待接收材料列表 -->
+      <div class="card">
+        <div class="card-header">待接收材料列表</div>
+        <div class="card-body p-0">
+          <table class="receive-table">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>护理员</th>
+                <th>服务对象数量</th>
+                <th>待确认材料</th>
+                <th>已归档材料</th>
+                <th>已退回材料</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>张护理员</td>
+                <td>2</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0</td>
+                <td class="action-buttons">
+                  <button class="btn btn-xs btn-outline-secondary" onclick="showNurseMaterials('张护理员')" title="查看该护理员服务哪些服务对象，从而核对纸质材料是否齐全">查看材料</button>
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>李护理员</td>
+                <td>2</td>
+                <td>1 <span class="status-overdue"><i class="fa fa-exclamation-circle"></i> 超期</span></td>
+                <td>0</td>
+                <td>1</td>
+                <td class="action-buttons">
+                  <button class="btn btn-xs btn-outline-secondary" onclick="showNurseMaterials('李护理员')" title="查看该护理员服务哪些服务对象，从而核对纸质材料是否齐全">查看材料</button>
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>王护理员</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="action-buttons">
+                  <button class="btn btn-xs btn-outline-secondary" onclick="showNurseMaterials('王护理员')" title="查看该护理员服务哪些服务对象，从而核对纸质材料是否齐全">查看材料</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 分页控件 -->
+      <div class="pagination">
+        <button class="pagination-btn disabled"><i class="fa fa-angle-left"></i></button>
+        <button class="pagination-btn active">1</button>
+        <button class="pagination-btn">2</button>
+        <button class="pagination-btn">3</button>
+        <button class="pagination-btn"><i class="fa fa-angle-right"></i></button>
+      </div>
+
+      <!-- 底部操作按钮 -->
+      <div class="bottom-actions">
+        <div>共 <strong>3</strong> 位护理员</div>
+        <button class="btn btn-outline-secondary">
+          <i class="fa fa-download"></i> 导出接收记录
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 材料预览模态框 -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="previewModalLabel">查看材料 - <span id="modalNurseName"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="preview-content">
+            <div class="alert alert-info" style="margin-bottom: 15px; padding: 10px 15px; background-color: #e6f7ff; border: 1px solid #91d5ff; border-radius: 4px; color: #1890ff; font-size: 13px;">
+              <i class="fa fa-info-circle"></i> <strong>说明：</strong>查看材料是查看该护理员服务哪些服务对象，从而核对纸质材料是否齐全。
+            </div>
+            <div class="preview-meta" style="margin-bottom: 15px;">
+              <div class="meta-item">
+                <div class="meta-label">护理员：</div>
+                <div class="meta-value" id="modalNurseNameValue"></div>
+              </div>
+            </div>
+            <div>
+              <h6 style="margin-bottom: 10px; font-weight: 600;">服务对象列表：</h6>
+              <table class="table table-bordered table-hover" style="margin-bottom: 0;">
+                <thead style="background-color: #f8f9fa;">
+                  <tr>
+                    <th style="width: 5%;">序号</th>
+                    <th style="width: 30%;">服务对象</th>
+                    <th style="width: 20%;">材料类型</th>
+                    <th style="width: 20%;">提交时间</th>
+                    <th style="width: 15%;">材料状态</th>
+                    <th style="width: 10%;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="serviceObjectsList">
+                  <!-- 服务对象列表将通过JavaScript动态加载 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 退回原因模态框 -->
+  <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="rejectModalLabel">退回材料</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">退回原因</label>
+            <textarea class="reason-textarea" id="rejectReason" placeholder="请填写退回原因，便于护理员修改（限200字）"></textarea>
+            <div class="reason-count"><span id="reasonLength">0</span>/200</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-danger" onclick="confirmReject()">确认退回</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 引入Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // 护理员服务对象数据（模拟数据）
+    const nurseData = {
+      '张护理员': [
+        { id: 1, name: '张三', idCard: '330623********1234', materialType: '服务计划', submitTime: '2024-11-20', status: 'pending', statusText: '待确认' },
+        { id: 4, name: '赵六', idCard: '330623********3456', materialType: '服务计划', submitTime: '2024-11-18', status: 'archived', statusText: '已归档' }
+      ],
+      '李护理员': [
+        { id: 2, name: '李四', idCard: '330623********5678', materialType: '服务记录', submitTime: '2024-11-15', status: 'pending', statusText: '待确认', overdue: true },
+        { id: 5, name: '钱七', idCard: '330623********7890', materialType: '服务记录', submitTime: '2024-11-21', status: 'rejected', statusText: '已退回' }
+      ],
+      '王护理员': [
+        { id: 3, name: '王五', idCard: '330623********9012', materialType: '服务记录', submitTime: '2024-11-22', status: 'pending', statusText: '待确认' }
+      ]
+    };
+
+    // 显示护理员材料（服务对象列表）
+    function showNurseMaterials(nurseName) {
+      const nurseMaterials = nurseData[nurseName] || [];
+      
+      // 设置模态框标题和护理员名称
+      document.getElementById('previewModalLabel').innerHTML = '查看材料 - <span id="modalNurseName">' + nurseName + '</span>';
+      document.getElementById('modalNurseNameValue').textContent = nurseName;
+      
+      // 清空并填充服务对象列表
+      const tbody = document.getElementById('serviceObjectsList');
+      tbody.innerHTML = '';
+      
+      if (nurseMaterials.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">暂无服务对象</td></tr>';
+      } else {
+        nurseMaterials.forEach((item, index) => {
+          const tr = document.createElement('tr');
+          
+          // 状态标签
+          let statusHtml = '';
+          if (item.status === 'pending') {
+            if (item.overdue) {
+              statusHtml = '<span class="status-overdue">待确认 <i class="fa fa-exclamation-circle"></i> 超期</span>';
+            } else {
+              statusHtml = '<span class="status-tag status-tag-pending">待确认</span>';
+            }
+          } else if (item.status === 'archived') {
+            statusHtml = '<span class="status-tag status-tag-archived">已归档</span>';
+          } else if (item.status === 'rejected') {
+            statusHtml = '<span class="status-tag status-tag-rejected">已退回</span>';
+          }
+          
+          // 操作按钮
+          let actionHtml = '';
+          if (item.status === 'pending' || item.status === 'rejected') {
+            actionHtml = '<button class="btn btn-xs btn-primary" onclick="confirmArchive(' + item.id + ')">确认归档</button> ' +
+                        '<button class="btn btn-xs btn-danger" onclick="showRejectModal(' + item.id + ')">退回</button>';
+          } else {
+            actionHtml = '<span style="color: #999;">-</span>';
+          }
+          
+          tr.innerHTML = 
+            '<td>' + (index + 1) + '</td>' +
+            '<td>' + item.name + '（' + item.idCard + '）</td>' +
+            '<td>' + item.materialType + '</td>' +
+            '<td>' + item.submitTime + '</td>' +
+            '<td>' + statusHtml + '</td>' +
+            '<td>' + actionHtml + '</td>';
+          
+          tbody.appendChild(tr);
+        });
+      }
+      
+      // 显示模态框
+      const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+      previewModal.show();
+    }
+
+    // 退回原因字数统计
+    document.getElementById('rejectReason').addEventListener('input', function() {
+      const length = this.value.length;
+      document.getElementById('reasonLength').textContent = length;
+      if (length > 200) {
+        this.value = this.value.substring(0, 200);
+        document.getElementById('reasonLength').textContent = 200;
+      }
+    });
+
+    // 显示退回弹窗
+    function showRejectModal(id) {
+      const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+      rejectModal.show();
+      // 可根据ID设置退回的材料ID
+      document.getElementById('rejectReason').value = '';
+      document.getElementById('reasonLength').textContent = '0';
+    }
+
+    // 确认归档
+    function confirmArchive(id) {
+      if (confirm('确认将此材料归档吗？')) {
+        alert('归档成功！材料状态已更新为"已归档"');
+        // 实际项目中可根据ID更新状态
+        // 刷新页面或更新表格数据
+        location.reload();
+      }
+    }
+
+    // 确认退回
+    function confirmReject() {
+      const reason = document.getElementById('rejectReason').value.trim();
+      if (!reason) {
+        alert('请填写退回原因');
+        return;
+      }
+      if (confirm('确认退回此材料吗？退回原因将同步给护理员')) {
+        alert('退回成功！护理员将收到退回通知');
+        const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+        rejectModal.hide();
+        // 实际项目中可提交退回原因并更新状态
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>

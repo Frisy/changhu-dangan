@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>档案管理平台 - 电子档案查询</title>
+  <!-- 引入外部资源 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  
+  <style>
+    /* 基础样式（复用） */
+    body { font-family: "微软雅黑", "思源黑体", sans-serif; background-color: #f5f7fa; color: #333; margin: 0; padding: 0; }
+    .btn-primary { background-color: #1890FF; border-color: #1890FF; }
+    .btn-primary:hover { background-color: #096DD9; border-color: #096DD9; }
+    .btn-outline-secondary { border-color: #ddd; color: #666; }
+    .btn-outline-secondary:hover { background-color: #f5f5f5; border-color: #ccc; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-header { background: #fff; border-bottom: 1px solid #f0f0f0; border-radius: 12px 12px 0 0; padding: 15px 20px; font-weight: 600; font-size: 15px; }
+    .card-body { padding: 20px; }
+    .badge { font-size: 12px; }
+
+    /* 布局样式（复用） */
+    .app-container { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #fff; box-shadow: 1px 0 2px rgba(0,0,0,0.05); padding: 20px 0; flex-shrink: 0; }
+    .sidebar-logo { text-align: center; padding: 0 20px 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; }
+    .sidebar-logo img { height: 40px; margin-bottom: 8px; }
+    .sidebar-logo h3 { font-size: 16px; color: #1890FF; font-weight: 600; margin: 0; }
+    .nav-menu { list-style: none; padding: 0; margin: 0; }
+    .nav-item { margin-bottom: 4px; }
+    .nav-link { display: flex; align-items: center; padding: 12px 20px; color: #666; text-decoration: none; font-size: 14px; border-left: 3px solid transparent; }
+    .nav-link:hover, .nav-link.active { color: #1890FF; background-color: #f0f7ff; border-left: 3px solid #1890FF; }
+    .nav-link i { font-size: 18px; margin-right: 12px; width: 20px; text-align: center; }
+    .nav-group-title { padding: 15px 20px 5px; font-size: 12px; color: #999; font-weight: 500; }
+
+    /* 主内容区（复用+新增） */
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-title { font-size: 20px; font-weight: 600; color: #333; margin: 0; }
+    .user-info { display: flex; align-items: center; }
+    .notification { position: relative; margin-right: 20px; cursor: pointer; }
+    .notification i { font-size: 20px; color: #666; }
+    .notification-badge { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #FF4D4F; color: #fff; border-radius: 50%; font-size: 12px; text-align: center; line-height: 18px; }
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1890FF; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; margin-right: 10px; }
+    .user-name { font-size: 14px; font-weight: 500; }
+
+    /* 档案统计卡片（新增） */
+    .stats-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stats-card { flex: 1; min-width: 200px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .stats-title { font-size: 14px; color: #666; margin-bottom: 10px; }
+    .stats-value { font-size: 24px; font-weight: 600; color: #1890FF; margin-bottom: 5px; }
+    .stats-desc { font-size: 12px; color: #999; }
+    .stats-card.warning { border-left: 4px solid #FAAD14; }
+    .stats-card.danger { border-left: 4px solid #FF4D4F; }
+    .stats-card.success { border-left: 4px solid #52C41A; }
+
+    /* 标签页样式（新增） */
+    .tabs-nav { display: flex; border-bottom: 1px solid #e8e8e8; margin-bottom: 20px; }
+    .tab-item { padding: 10px 20px; cursor: pointer; font-weight: 500; color: #666; border-bottom: 2px solid transparent; }
+    .tab-item.active { color: #1890FF; border-bottom: 2px solid #1890FF; }
+
+    /* 筛选区样式（新增） */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; }
+    .search-box { flex: 1; min-width: 200px; }
+    .filter-group { flex: 1; min-width: 150px; }
+    .filter-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 14px; }
+    .advanced-filter { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
+
+    /* 档案列表样式（新增） */
+    .data-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+    .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+    .data-table th { background-color: #f8f9fa; font-weight: 600; font-size: 14px; }
+    .data-table tbody tr:hover { background-color: #f9f9f9; }
+    .table-actions { display: flex; gap: 5px; }
+    .btn-xs { padding: 2px 8px; font-size: 12px; }
+
+    /* 档案状态样式（新增） */
+    .status-complete { color: #52C41A; }
+    .status-missing { color: #FAAD14; position: relative; cursor: help; }
+    .status-missing:hover::after { content: attr(data-tooltip); position: absolute; top: -30px; left: 0; background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 100; }
+    .status-invalid { color: #FF4D4F; position: relative; cursor: help; }
+    .status-invalid:hover::after { content: attr(data-tooltip); position: absolute; top: -30px; left: 0; background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 100; }
+
+    /* 分页样式（新增） */
+    .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    .pagination-info { font-size: 14px; color: #666; }
+
+    /* 档案详情弹窗样式（新增） */
+    .modal-xl { max-width: 1200px; }
+    .file-preview { border: 1px solid #f0f0f0; border-radius: 8px; padding: 10px; text-align: center; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; }
+    .file-preview:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .file-preview img { max-width: 100%; max-height: 150px; object-fit: contain; margin-bottom: 10px; }
+    .file-name { font-size: 13px; font-weight: 500; }
+    .file-meta { font-size: 12px; color: #999; }
+    .detail-tabs { border-bottom: 1px solid #e8e8e8; margin-bottom: 20px; }
+    .detail-tab { padding: 10px 20px; cursor: pointer; font-weight: 500; color: #666; border-bottom: 2px solid transparent; display: inline-block; }
+    .detail-tab.active { color: #1890FF; border-bottom: 2px solid #1890FF; }
+    .detail-content { display: none; }
+    .detail-content.active { display: block; }
+    .info-table { width: 100%; margin-bottom: 20px; }
+    .info-table td { padding: 8px 15px; border-bottom: 1px solid #f0f0f0; }
+    .info-table td:first-child { width: 20%; font-weight: 500; background-color: #f8f9fa; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边导航 -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <img src="https://via.placeholder.com/80x40?text=居家长护" alt="系统Logo">
+        <h3>档案管理平台</h3>
+      </div>
+      
+      <div class="nav-group-title">档案管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="#" class="nav-link active">
+            <i class="fa fa-search"></i>
+            <span>电子档案查询</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-upload"></i>
+            <span>档案材料上传</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-check-square-o"></i>
+            <span>档案合规检查</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-download"></i>
+            <span>档案导出管理</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-group-title">系统管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-user"></i><span>用户管理</span></a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-cog"></i><span>系统设置</span></a></li>
+      </ul>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 顶部导航 -->
+      <div class="top-nav">
+        <h1 class="page-title">电子档案查询</h1>
+        <div class="user-info">
+          <div class="notification">
+            <i class="fa fa-bell-o"></i>
+            <span class="notification-badge">2</span>
+          </div>
+          <div class="user-avatar">档</div>
+          <div class="user-name">档案管理员</div>
+        </div>
+      </div>
+
+      <!-- 合规统计卡片 -->
+      <div class="stats-container">
+        <div class="stats-card success">
+          <div class="stats-title">服务对象档案完整率</div>
+          <div class="stats-value">93%</div>
+          <div class="stats-desc">共 1280 份档案，1190 份完整</div>
+        </div>
+        <div class="stats-card warning">
+          <div class="stats-title">护理员资质上传率</div>
+          <div class="stats-value">89%</div>
+          <div class="stats-desc">共 156 名护理员，139 名已上传</div>
+        </div>
+        <div class="stats-card danger">
+          <div class="stats-title">待补充材料</div>
+          <div class="stats-value">127 份</div>
+          <div class="stats-desc">点击查看缺失材料清单</div>
+        </div>
+      </div>
+
+      <!-- 档案类型标签页 -->
+      <div class="tabs-nav">
+        <div class="tab-item active" id="tab-client">服务对象档案</div>
+        <div class="tab-item" id="tab-caregiver">护理员档案</div>
+      </div>
+
+      <!-- 服务对象档案查询区 -->
+      <div id="client-section">
+        <!-- 筛选区 -->
+        <div class="filter-bar">
+          <div class="search-box">
+            <input type="text" class="form-control" placeholder="请输入服务对象姓名/身份证号搜索">
+          </div>
+          <div class="filter-group">
+            <label>行政区域</label>
+            <select class="form-select">
+              <option value="all">全部区域</option>
+              <option value="越城区">越城区</option>
+              <option value="柯桥区">柯桥区</option>
+              <option value="上虞区">上虞区</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>服务状态</label>
+            <select class="form-select">
+              <option value="all">全部状态</option>
+              <option value="normal">正常</option>
+              <option value="pause">暂停</option>
+              <option value="transfer">转出</option>
+              <option value="death">死亡</option>
+            </select>
+          </div>
+          <button class="btn btn-primary"><i class="fa fa-search"></i> 查询</button>
+          <button class="btn btn-outline-secondary" id="advancedFilterBtn"><i class="fa fa-filter"></i> 高级筛选</button>
+        </div>
+
+        <!-- 高级筛选区 -->
+        <div class="filter-bar advanced-filter" id="clientAdvancedFilter">
+          <div class="filter-group">
+            <label>签约时间范围</label>
+            <div class="d-flex gap-2">
+              <input type="date" class="form-control" value="2024-01-01">
+              <span class="align-middle">至</span>
+              <input type="date" class="form-control" value="2024-12-31">
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>失能等级</label>
+            <select class="form-select">
+              <option value="all">全部等级</option>
+              <option value="1">一级</option>
+              <option value="2">二级</option>
+              <option value="3">三级</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>档案完整性</label>
+            <select class="form-select">
+              <option value="all">全部</option>
+              <option value="complete">完整</option>
+              <option value="missing">缺失材料</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 服务对象档案列表 -->
+        <div class="card">
+          <div class="card-body p-0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllClient"></th>
+                  <th>姓名</th>
+                  <th>身份证号</th>
+                  <th>行政区域</th>
+                  <th>失能等级</th>
+                  <th>服务状态</th>
+                  <th>档案完整性</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" name="clientItem"></td>
+                  <td>郑三</td>
+                  <td>330623********1234</td>
+                  <td>越城区</td>
+                  <td>二级</td>
+                  <td><span class="badge bg-success">正常</span></td>
+                  <td><span class="status-complete"><i class="fa fa-check-circle"></i> 完整</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#clientDetailModal">查看档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="clientItem"></td>
+                  <td>王五</td>
+                  <td>330623********5678</td>
+                  <td>柯桥区</td>
+                  <td>三级</td>
+                  <td><span class="badge bg-warning">暂停</span></td>
+                  <td><span class="status-missing" data-tooltip="评估结论书未归档、服务协议未签字"><i class="fa fa-exclamation-circle"></i> 缺失材料</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#clientDetailModal">查看档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="clientItem"></td>
+                  <td>赵六</td>
+                  <td>330623********9012</td>
+                  <td>上虞区</td>
+                  <td>一级</td>
+                  <td><span class="badge bg-danger">转出</span></td>
+                  <td><span class="status-complete"><i class="fa fa-check-circle"></i> 完整</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#clientDetailModal">查看档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="clientItem"></td>
+                  <td>钱七</td>
+                  <td>330623********3456</td>
+                  <td>越城区</td>
+                  <td>二级</td>
+                  <td><span class="badge bg-dark">死亡</span></td>
+                  <td><span class="status-missing" data-tooltip="死亡证明未归档"><i class="fa fa-exclamation-circle"></i> 缺失材料</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#clientDetailModal">查看档案</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 分页和导出 -->
+        <div class="pagination-container">
+          <div>
+            <button class="btn btn-outline-secondary">
+              <i class="fa fa-download"></i> 导出档案清单
+            </button>
+            <button class="btn btn-outline-secondary ms-2">
+              <i class="fa fa-file-excel-o"></i> 导出缺失材料清单
+            </button>
+          </div>
+          <div>
+            <span class="pagination-info">共 1280 条记录，当前第 1 页/共 64 页</span>
+            <nav class="d-inline-block ms-3">
+              <ul class="pagination mb-0">
+                <li class="page-item disabled"><a class="page-link" href="#">上一页</a></li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item"><a class="page-link" href="#">下一页</a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- 护理员档案查询区（默认隐藏） -->
+      <div id="caregiver-section" style="display: none;">
+        <!-- 筛选区 -->
+        <div class="filter-bar">
+          <div class="search-box">
+            <input type="text" class="form-control" placeholder="请输入护理员姓名/身份证号搜索">
+          </div>
+          <div class="filter-group">
+            <label>服务区域</label>
+            <select class="form-select">
+              <option value="all">全部区域</option>
+              <option value="越城区">越城区</option>
+              <option value="柯桥区">柯桥区</option>
+              <option value="上虞区">上虞区</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>资质状态</label>
+            <select class="form-select">
+              <option value="all">全部状态</option>
+              <option value="uploaded">已上传</option>
+              <option value="not_uploaded">未上传</option>
+            </select>
+          </div>
+          <button class="btn btn-primary"><i class="fa fa-search"></i> 查询</button>
+          <button class="btn btn-outline-secondary" id="caregiverAdvancedFilterBtn"><i class="fa fa-filter"></i> 高级筛选</button>
+        </div>
+
+        <!-- 高级筛选区 -->
+        <div class="filter-bar advanced-filter" id="caregiverAdvancedFilter">
+          <div class="filter-group">
+            <label>账号状态</label>
+            <select class="form-select">
+              <option value="all">全部状态</option>
+              <option value="normal">正常</option>
+              <option value="locked">锁定</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>资质类型</label>
+            <select class="form-select">
+              <option value="all">全部资质</option>
+              <option value="skill">职业技能证书</option>
+              <option value="health">健康证明</option>
+              <option value="contract">服务合同</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>档案完整性</label>
+            <select class="form-select">
+              <option value="all">全部</option>
+              <option value="complete">完整</option>
+              <option value="missing">缺失材料</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 护理员档案列表 -->
+        <div class="card">
+          <div class="card-body p-0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllCaregiver"></th>
+                  <th>姓名</th>
+                  <th>身份证号</th>
+                  <th>服务区域</th>
+                  <th>资质状态</th>
+                  <th>账号状态</th>
+                  <th>档案完整性</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" name="caregiverItem"></td>
+                  <td>李护理</td>
+                  <td>330623********1111</td>
+                  <td>越城区</td>
+                  <td><span class="badge bg-success">已上传</span></td>
+                  <td><span class="badge bg-success">正常</span></td>
+                  <td><span class="status-complete"><i class="fa fa-check-circle"></i> 完整</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#caregiverDetailModal">查看档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="caregiverItem"></td>
+                  <td>王护理</td>
+                  <td>330623********2222</td>
+                  <td>柯桥区</td>
+                  <td><span class="badge bg-danger">未上传</span></td>
+                  <td><span class="badge bg-success">正常</span></td>
+                  <td><span class="status-invalid" data-tooltip="职业技能证书未上传、健康证明过期"><i class="fa fa-times-circle"></i> 资质不全</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#caregiverDetailModal">查看档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="caregiverItem"></td>
+                  <td>张护理</td>
+                  <td>330623********3333</td>
+                  <td>上虞区</td>
+                  <td><span class="badge bg-success">已上传</span></td>
+                  <td><span class="badge bg-danger">锁定</span></td>
+                  <td><span class="status-missing" data-tooltip="服务合同未续签"><i class="fa fa-exclamation-circle"></i> 缺失材料</span></td>
+                  <td class="table-actions">
+                    <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#caregiverDetailModal">查看档案</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 分页和导出 -->
+        <div class="pagination-container">
+          <div>
+            <button class="btn btn-outline-secondary">
+              <i class="fa fa-download"></i> 导出档案清单
+            </button>
+            <button class="btn btn-outline-secondary ms-2">
+              <i class="fa fa-file-excel-o"></i> 导出资质缺失清单
+            </button>
+          </div>
+          <div>
+            <span class="pagination-info">共 156 条记录，当前第 1 页/共 8 页</span>
+            <nav class="d-inline-block ms-3">
+              <ul class="pagination mb-0">
+                <li class="page-item disabled"><a class="page-link" href="#">上一页</a></li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item"><a class="page-link" href="#">下一页</a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 服务对象档案详情弹窗 -->
+  <div class="modal fade" id="clientDetailModal" tabindex="-1" aria-labelledby="clientDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="clientDetailModalLabel">服务对象档案 - 郑三</h5>
+          <div class="ms-auto">
+            <button class="btn btn-outline-secondary btn-sm me-2">
+              <i class="fa fa-download"></i> 下载全部材料
+            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <!-- 基础信息 -->
+          <table class="info-table">
+            <tr>
+              <td>姓名</td>
+              <td>郑三</td>
+            </tr>
+            <tr>
+              <td>身份证号</td>
+              <td>330623********1234</td>
+            </tr>
+            <tr>
+              <td>失能等级</td>
+              <td>二级</td>
+            </tr>
+            <tr>
+              <td>服务状态</td>
+              <td>正常</td>
+            </tr>
+            <tr>
+              <td>签约日期</td>
+              <td>2024-01-15</td>
+            </tr>
+            <tr>
+              <td>档案完整性</td>
+              <td><span class="status-complete"><i class="fa fa-check-circle"></i> 完整</span></td>
+            </tr>
+          </table>
+
+          <!-- 档案内容标签页 -->
+          <div class="detail-tabs">
+            <div class="detail-tab active" data-tab="evaluation">评估材料</div>
+            <div class="detail-tab" data-tab="agreement">服务协议</div>
+            <div class="detail-tab" data-tab="records">服务记录</div>
+            <div class="detail-tab" data-tab="changes">变更记录</div>
+          </div>
+
+          <!-- 评估材料 -->
+          <div class="detail-content active" id="evaluation">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=身份证正面" alt="身份证正面">
+                  <div class="file-name">身份证正面.jpg</div>
+                  <div class="file-meta">上传时间：2024-01-16 | 上传人：评估员张三</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=病情证明" alt="病情证明">
+                  <div class="file-name">病情证明.pdf</div>
+                  <div class="file-meta">上传时间：2024-01-16 | 上传人：评估员张三</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=评估表格" alt="评估表格">
+                  <div class="file-name">失能评估表.jpg</div>
+                  <div class="file-meta">上传时间：2024-01-16 | 上传人：评估员张三</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 服务协议 -->
+          <div class="detail-content" id="agreement">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/400x500?text=服务协议" alt="服务协议">
+                  <div class="file-name">居家护理服务协议.pdf</div>
+                  <div class="file-meta">上传时间：2024-01-20 | 上传人：档案管理员</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 服务记录 -->
+          <div class="detail-content" id="records">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=11月计划" alt="11月计划">
+                  <div class="file-name">2024年11月服务计划.pdf</div>
+                  <div class="file-meta">上传时间：2024-10-28 | 上传人：排单员</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=10月工单" alt="10月工单">
+                  <div class="file-name">2024年10月工单记录.jpg</div>
+                  <div class="file-meta">上传时间：2024-11-01 | 上传人：李护理</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 变更记录 -->
+          <div class="detail-content" id="changes">
+            <div class="alert alert-info">暂无变更记录</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 护理员档案详情弹窗 -->
+  <div class="modal fade" id="caregiverDetailModal" tabindex="-1" aria-labelledby="caregiverDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="caregiverDetailModalLabel">护理员档案 - 李护理</h5>
+          <div class="ms-auto">
+            <button class="btn btn-outline-secondary btn-sm me-2">
+              <i class="fa fa-download"></i> 下载全部材料
+            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <!-- 基础信息 -->
+          <table class="info-table">
+            <tr>
+              <td>姓名</td>
+              <td>李护理</td>
+            </tr>
+            <tr>
+              <td>身份证号</td>
+              <td>330623********1111</td>
+            </tr>
+            <tr>
+              <td>服务区域</td>
+              <td>越城区</td>
+            </tr>
+            <tr>
+              <td>资质状态</td>
+              <td>已上传</td>
+            </tr>
+            <tr>
+              <td>账号状态</td>
+              <td>正常</td>
+            </tr>
+            <tr>
+              <td>入职日期</td>
+              <td>2023-05-10</td>
+            </tr>
+          </table>
+
+          <!-- 档案内容标签页 -->
+          <div class="detail-tabs">
+            <div class="detail-tab active" data-tab="basic">基础信息</div>
+            <div class="detail-tab" data-tab="qualification">资质材料</div>
+            <div class="detail-tab" data-tab="statistics">服务统计</div>
+          </div>
+
+          <!-- 基础信息 -->
+          <div class="detail-content active" id="basic">
+            <table class="info-table">
+              <tr>
+                <td>联系电话</td>
+                <td>138****1234</td>
+              </tr>
+              <tr>
+                <td>文化程度</td>
+                <td>大专</td>
+              </tr>
+              <tr>
+                <td>护理经验</td>
+                <td>5年</td>
+              </tr>
+              <tr>
+                <td>培训情况</td>
+                <td>2024年3月参加护理技能提升培训</td>
+              </tr>
+              <tr>
+                <td>紧急联系人</td>
+                <td>李XX（139****5678）</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 资质材料 -->
+          <div class="detail-content" id="qualification">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=身份证" alt="身份证">
+                  <div class="file-name">身份证复印件.jpg</div>
+                  <div class="file-meta">上传时间：2023-05-10 | 上传人：档案管理员</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=技能证书" alt="技能证书">
+                  <div class="file-name">养老护理员（中级）证书.pdf</div>
+                  <div class="file-meta">上传时间：2023-05-10 | 上传人：档案管理员</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="file-preview">
+                  <img src="https://via.placeholder.com/200x300?text=健康证明" alt="健康证明">
+                  <div class="file-name">2024年健康证明.jpg</div>
+                  <div class="file-meta">上传时间：2024-01-15 | 上传人：李护理</div>
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary"><i class="fa fa-eye"></i> 预览</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1"><i class="fa fa-download"></i> 下载</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 服务统计 -->
+          <div class="detail-content" id="statistics">
+            <table class="info-table">
+              <tr>
+                <td>本月服务工时</td>
+                <td>168小时</td>
+              </tr>
+              <tr>
+                <td>服务对象数量</td>
+                <td>12人</td>
+              </tr>
+              <tr>
+                <td>服务满意率</td>
+                <td>98.5%</td>
+              </tr>
+              <tr>
+                <td>本月工单完成率</td>
+                <td>100%</td>
+              </tr>
+              <tr>
+                <td>年度培训时长</td>
+                <td>24小时</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 引入Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // 标签页切换
+    document.getElementById('tab-client').addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('tab-caregiver').classList.remove('active');
+      document.getElementById('client-section').style.display = 'block';
+      document.getElementById('caregiver-section').style.display = 'none';
+    });
+
+    document.getElementById('tab-caregiver').addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('tab-client').classList.remove('active');
+      document.getElementById('client-section').style.display = 'none';
+      document.getElementById('caregiver-section').style.display = 'block';
+    });
+
+    // 高级筛选切换
+    document.getElementById('advancedFilterBtn').addEventListener('click', function() {
+      const advancedFilter = document.getElementById('clientAdvancedFilter');
+      advancedFilter.style.display = advancedFilter.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('caregiverAdvancedFilterBtn').addEventListener('click', function() {
+      const advancedFilter = document.getElementById('caregiverAdvancedFilter');
+      advancedFilter.style.display = advancedFilter.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // 全选功能
+    document.getElementById('selectAllClient').addEventListener('change', function() {
+      const checkboxes = document.querySelectorAll('input[name="clientItem"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    });
+
+    document.getElementById('selectAllCaregiver').addEventListener('change', function() {
+      const checkboxes = document.querySelectorAll('input[name="caregiverItem"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    });
+
+    // 档案详情标签页切换
+    document.querySelectorAll('.detail-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        // 移除所有激活状态
+        document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.detail-content').forEach(c => c.classList.remove('active'));
+        
+        // 添加当前激活状态
+        this.classList.add('active');
+        const tabId = this.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

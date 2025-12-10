@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>档案管理平台 - 已签字材料打印</title>
+  <!-- 引入外部资源 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  
+  <style>
+    /* 复用原有样式 */
+    body { font-family: "微软雅黑", "思源黑体", sans-serif; background-color: #f5f7fa; color: #333; margin: 0; padding: 0; }
+    .btn-primary { background-color: #1890FF; border-color: #1890FF; }
+    .btn-primary:hover { background-color: #096DD9; border-color: #096DD9; }
+    .btn-outline-secondary { border-color: #ddd; color: #666; }
+    .btn-outline-secondary:hover { background-color: #f5f5f5; border-color: #ccc; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-header { background: #fff; border-bottom: 1px solid #f0f0f0; border-radius: 12px 12px 0 0; padding: 15px 20px; font-weight: 600; font-size: 15px; }
+    .card-body { padding: 20px; }
+    .badge { font-size: 12px; }
+
+    /* 布局样式复用 */
+    .app-container { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #fff; box-shadow: 1px 0 2px rgba(0,0,0,0.05); padding: 20px 0; flex-shrink: 0; }
+    .sidebar-logo { text-align: center; padding: 0 20px 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; }
+    .sidebar-logo img { height: 40px; margin-bottom: 8px; }
+    .sidebar-logo h3 { font-size: 16px; color: #1890FF; font-weight: 600; margin: 0; }
+    .nav-menu { list-style: none; padding: 0; margin: 0; }
+    .nav-item { margin-bottom: 4px; }
+    .nav-link { display: flex; align-items: center; padding: 12px 20px; color: #666; text-decoration: none; font-size: 14px; border-left: 3px solid transparent; }
+    .nav-link:hover, .nav-link.active { color: #1890FF; background-color: #f0f7ff; border-left: 3px solid #1890FF; }
+    .nav-link i { font-size: 18px; margin-right: 12px; width: 20px; text-align: center; }
+    .nav-group-title { padding: 15px 20px 5px; font-size: 12px; color: #999; font-weight: 500; }
+
+    /* 主内容区复用+新增 */
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-title { font-size: 20px; font-weight: 600; color: #333; margin: 0; }
+    .user-info { display: flex; align-items: center; }
+    .notification { position: relative; margin-right: 20px; cursor: pointer; }
+    .notification i { font-size: 20px; color: #666; }
+    .notification-badge { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #FF4D4F; color: #fff; border-radius: 50%; font-size: 12px; text-align: center; line-height: 18px; }
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1890FF; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; margin-right: 10px; }
+    .user-name { font-size: 14px; font-weight: 500; }
+
+    /* 新增：已签字材料打印样式 */
+    .print-tabs { border-bottom: 1px solid #e8e8e8; margin-bottom: 20px; }
+    .print-tab { padding: 10px 20px; cursor: pointer; font-weight: 500; color: #666; border-bottom: 2px solid transparent; display: inline-block; }
+    .print-tab.active { color: #1890FF; border-bottom: 2px solid #1890FF; }
+    
+    .filter-bar { background: #fff; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+    .filter-item { flex: 1; min-width: 180px; }
+    .filter-item label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .filter-item select, .filter-item input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .filter-actions { display: flex; gap: 10px; align-items: flex-end; }
+    
+    .print-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+    .print-table th, .print-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+    .print-table th { background-color: #f8f9fa; font-weight: 600; font-size: 14px; }
+    .print-table tbody tr:hover { background-color: #f9f9f9; }
+    .print-table tbody tr.disabled { opacity: 0.6; }
+    
+    .print-table .form-check { margin: 0; }
+    .print-table .form-check-input { cursor: pointer; }
+    
+    .level-tag, .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .level-1 { background: #e6f7ff; color: #1890FF; }
+    .level-2 { background: #f6ffed; color: #52C41A; }
+    .level-3 { background: #fff7e6; color: #FAAD14; }
+    .level-4 { background: #fff2f0; color: #FF4D4F; }
+    .status-signed { background: #f6ffed; color: #52C41A; }
+    .status-unsigned { background: #fff2f0; color: #FF4D4F; }
+    
+    .action-buttons { display: flex; gap: 5px; }
+    .btn-xs { padding: 2px 8px; font-size: 12px; }
+    .btn-disabled { cursor: not-allowed; opacity: 0.6; }
+    
+    .bottom-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    .batch-actions { display: flex; gap: 10px; }
+    
+    /* 扫描件预览样式 */
+    .preview-container { background: #fff; padding: 20px; max-height: 70vh; overflow-y: auto; }
+    .scan-preview { position: relative; width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; background: #fff; }
+    .scan-image { width: 100%; border: 1px solid #eee; margin-bottom: 20px; }
+    .watermark { position: absolute; bottom: 20px; right: 20px; color: rgba(0,0,0,0.1); font-size: 14px; transform: rotate(-15deg); pointer-events: none; }
+    .print-options { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+    .print-copies { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .purpose-options { display: flex; gap: 20px; margin-bottom: 15px; }
+    
+    /* 打印日志样式 */
+    .log-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+    .log-table th, .log-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .log-table th { background-color: #f8f9fa; font-weight: 600; }
+    .log-table tbody tr:hover { background-color: #f9f9f9; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边导航 -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <img src="https://via.placeholder.com/80x40?text=居家长护" alt="系统Logo">
+        <h3>档案管理平台</h3>
+      </div>
+      
+      <div class="nav-group-title">档案管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-search"></i>
+            <span>电子档案查询</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-camera"></i>
+            <span>档案材料录入</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-check-circle"></i>
+            <span>服务计划记录接收</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-print"></i>
+            <span>评估材料身份证打印</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link active">
+            <i class="fa fa-file-text-o"></i>
+            <span>已签字材料打印</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-group-title">系统管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-user"></i><span>用户管理</span></a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-cog"></i><span>系统设置</span></a></li>
+      </ul>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 顶部导航 -->
+      <div class="top-nav">
+        <h1 class="page-title">已签字评估结论书和服务协议打印</h1>
+        <div class="user-info">
+          <div class="notification">
+            <i class="fa fa-bell-o"></i>
+            <span class="notification-badge">1</span>
+          </div>
+          <div class="user-avatar">档</div>
+          <div class="user-name">档案管理员</div>
+        </div>
+      </div>
+
+      <!-- 打印方式标签页 -->
+      <div class="print-tabs">
+        <div class="print-tab active" id="tab-conclusion">评估结论书打印</div>
+        <div class="print-tab" id="tab-agreement">服务协议打印</div>
+      </div>
+
+      <!-- 评估结论书打印区域 -->
+      <div id="conclusion-section">
+        <!-- 筛选区域 -->
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>行政区域</label>
+            <select id="conclusionDistrict">
+              <option value="">全部区域</option>
+              <option value="district1">越城区</option>
+              <option value="district2">柯桥区</option>
+              <option value="district3">上虞区</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>公示日期</label>
+            <input type="date" id="publicStartDate" placeholder="开始日期">
+          </div>
+          <div class="filter-item">
+            <label>至</label>
+            <input type="date" id="publicEndDate" placeholder="结束日期">
+          </div>
+          <div class="filter-item">
+            <label>评估等级</label>
+            <select id="conclusionLevel">
+              <option value="">全部等级</option>
+              <option value="1">一级</option>
+              <option value="2">二级</option>
+              <option value="3">三级</option>
+              <option value="4">四级（重度失能）</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>签字状态</label>
+            <select id="signStatus">
+              <option value="">全部状态</option>
+              <option value="signed">已签字</option>
+              <option value="unsigned">未签字</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>服务对象</label>
+            <input type="text" id="conclusionName" placeholder="姓名/身份证号">
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary">
+              <i class="fa fa-search"></i> 查询
+            </button>
+            <button class="btn btn-outline-secondary">
+              <i class="fa fa-refresh"></i> 重置
+            </button>
+          </div>
+        </div>
+
+        <!-- 评估结论书列表 -->
+        <div class="card">
+          <div class="card-header">评估结论书列表</div>
+          <div class="card-body p-0">
+            <table class="print-table">
+              <thead>
+                <tr>
+                  <th width="50"><input type="checkbox" id="checkAllConclusion"></th>
+                  <th>序号</th>
+                  <th>服务对象</th>
+                  <th>身份证号</th>
+                  <th>评估等级</th>
+                  <th>公示日期</th>
+                  <th>签字状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" name="conclusionItem" value="1"></td>
+                  <td>1</td>
+                  <td>张三</td>
+                  <td>330623********1234</td>
+                  <td><span class="level-tag level-4">四级（重度失能）</span></td>
+                  <td>2024-10-20</td>
+                  <td><span class="status-tag status-signed">已签字</span></td>
+                  <td class="action-buttons">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="previewConclusion(1)">预览</button>
+                    <button class="btn btn-xs btn-primary" onclick="printConclusion(1)">打印</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="conclusionItem" value="2"></td>
+                  <td>2</td>
+                  <td>李四</td>
+                  <td>330623********5678</td>
+                  <td><span class="level-tag level-3">三级</span></td>
+                  <td>2024-10-22</td>
+                  <td><span class="status-tag status-signed">已签字</span></td>
+                  <td class="action-buttons">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="previewConclusion(2)">预览</button>
+                    <button class="btn btn-xs btn-primary" onclick="printConclusion(2)">打印</button>
+                  </td>
+                </tr>
+                <tr class="disabled">
+                  <td><input type="checkbox" name="conclusionItem" value="3" disabled></td>
+                  <td>3</td>
+                  <td>王五</td>
+                  <td>330623********9012</td>
+                  <td><span class="level-tag level-2">二级</span></td>
+                  <td>2024-10-25</td>
+                  <td><span class="status-tag status-unsigned">未签字</span></td>
+                  <td class="action-buttons">
+                    <button class="btn btn-xs btn-outline-secondary btn-disabled" disabled>预览</button>
+                    <button class="btn btn-xs btn-primary btn-disabled" disabled>打印</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 服务协议打印区域（默认隐藏） -->
+      <div id="agreement-section" style="display: none;">
+        <!-- 筛选区域 -->
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>行政区域</label>
+            <select id="agreementDistrict">
+              <option value="">全部区域</option>
+              <option value="district1">越城区</option>
+              <option value="district2">柯桥区</option>
+              <option value="district3">上虞区</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>签约日期</label>
+            <input type="date" id="signStartDate" placeholder="开始日期">
+          </div>
+          <div class="filter-item">
+            <label>至</label>
+            <input type="date" id="signEndDate" placeholder="结束日期">
+          </div>
+          <div class="filter-item">
+            <label>服务对象</label>
+            <input type="text" id="agreementName" placeholder="姓名/身份证号">
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary">
+              <i class="fa fa-search"></i> 查询
+            </button>
+            <button class="btn btn-outline-secondary">
+              <i class="fa fa-refresh"></i> 重置
+            </button>
+          </div>
+        </div>
+
+        <!-- 服务协议列表 -->
+        <div class="card">
+          <div class="card-header">服务协议列表（仅重度失能）</div>
+          <div class="card-body p-0">
+            <table class="print-table">
+              <thead>
+                <tr>
+                  <th width="50"><input type="checkbox" id="checkAllAgreement"></th>
+                  <th>序号</th>
+                  <th>姓名</th>
+                  <th>身份证号</th>
+                  <th>失能等级</th>
+                  <th>签约日期</th>
+                  <th>协议期限</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" name="agreementItem" value="1"></td>
+                  <td>1</td>
+                  <td>张三</td>
+                  <td>330623********1234</td>
+                  <td><span class="level-tag level-4">四级（重度失能）</span></td>
+                  <td>2024-10-25</td>
+                  <td>2024-10-25 至 2025-10-24</td>
+                  <td class="action-buttons">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="previewAgreement(1)">预览</button>
+                    <button class="btn btn-xs btn-primary" onclick="printAgreement(1)">打印</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" name="agreementItem" value="2"></td>
+                  <td>2</td>
+                  <td>赵六</td>
+                  <td>330623********3456</td>
+                  <td><span class="level-tag level-4">四级（重度失能）</span></td>
+                  <td>2024-10-28</td>
+                  <td>2024-10-28 至 2025-10-27</td>
+                  <td class="action-buttons">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="previewAgreement(2)">预览</button>
+                    <button class="btn btn-xs btn-primary" onclick="printAgreement(2)">打印</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部操作按钮 -->
+      <div class="bottom-actions">
+        <div id="recordCount">共 <strong>2</strong> 条可打印记录</div>
+        <div class="batch-actions">
+          <button class="btn btn-outline-secondary" onclick="openPrintLog()">
+            <i class="fa fa-history"></i> 查看打印日志
+          </button>
+          <button class="btn btn-primary" id="batchPrintBtn">
+            <i class="fa fa-print"></i> 批量打印
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评估结论书预览模态框 -->
+  <div class="modal fade" id="conclusionPreviewModal" tabindex="-1" aria-labelledby="conclusionPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="conclusionPreviewModalLabel">评估结论书预览 - 张三</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="preview-container">
+            <div class="scan-preview">
+              <h4 style="text-align: center; margin-bottom: 20px;">长期护理保险失能等级评估结论书</h4>
+              <img src="https://via.placeholder.com/700x900?text=评估结论书扫描件（含签字盖章）" alt="评估结论书扫描件" class="scan-image">
+              
+              <div class="watermark">
+                XX机构档案专用<br>
+                打印日期：2024-11-27<br>
+                打印人：档案管理员
+              </div>
+            </div>
+            
+            <div class="print-options">
+              <div class="print-copies">
+                <label class="form-label mb-0">打印份数：</label>
+                <input type="number" class="form-control copies-input" value="2" min="1" max="5" id="conclusionCopies">
+              </div>
+              
+              <div class="purpose-options">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="purposeArchive1" checked>
+                  <label class="form-check-label" for="purposeArchive1">存档使用</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="purposeMedical1" checked>
+                  <label class="form-check-label" for="purposeMedical1">医保提交</label>
+                </div>
+              </div>
+              
+              <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="printConclusionDocument()">
+                  <i class="fa fa-print"></i> 打印评估结论书
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 服务协议预览模态框 -->
+  <div class="modal fade" id="agreementPreviewModal" tabindex="-1" aria-labelledby="agreementPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="agreementPreviewModalLabel">服务协议预览 - 张三</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="preview-container">
+            <div class="scan-preview">
+              <h4 style="text-align: center; margin-bottom: 20px;">长期护理保险服务协议</h4>
+              <img src="https://via.placeholder.com/700x900?text=服务协议扫描件（含签字盖章）" alt="服务协议扫描件" class="scan-image">
+              
+              <div class="watermark">
+                XX机构档案专用<br>
+                打印日期：2024-11-27<br>
+                打印人：档案管理员
+              </div>
+            </div>
+            
+            <div class="print-options">
+              <div class="print-copies">
+                <label class="form-label mb-0">打印份数：</label>
+                <input type="number" class="form-control copies-input" value="2" min="1" max="5" id="agreementCopies">
+              </div>
+              
+              <div class="purpose-options">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="purposeArchive2" checked>
+                  <label class="form-check-label" for="purposeArchive2">存档使用</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="purposeMedical2" checked>
+                  <label class="form-check-label" for="purposeMedical2">医保提交</label>
+                </div>
+              </div>
+              
+              <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="printAgreementDocument()">
+                  <i class="fa fa-print"></i> 打印服务协议
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 打印日志模态框 -->
+  <div class="modal fade" id="printLogModal" tabindex="-1" aria-labelledby="printLogModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="printLogModalLabel">打印操作日志</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- 日志筛选区域 -->
+          <div class="filter-bar" style="margin-bottom: 15px;">
+            <div class="filter-item" style="min-width: 150px;">
+              <label>打印时间</label>
+              <input type="date" id="logStartDate" placeholder="开始日期">
+            </div>
+            <div class="filter-item" style="min-width: 150px;">
+              <label>至</label>
+              <input type="date" id="logEndDate" placeholder="结束日期">
+            </div>
+            <div class="filter-item" style="min-width: 150px;">
+              <label>打印人</label>
+              <input type="text" id="logOperator" placeholder="输入打印人">
+            </div>
+            <div class="filter-item" style="min-width: 150px;">
+              <label>材料类型</label>
+              <select id="logMaterialType">
+                <option value="">全部类型</option>
+                <option value="conclusion">评估结论书</option>
+                <option value="agreement">服务协议</option>
+              </select>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary btn-sm">
+                <i class="fa fa-search"></i> 查询
+              </button>
+              <button class="btn btn-outline-secondary btn-sm">
+                <i class="fa fa-refresh"></i> 重置
+              </button>
+            </div>
+          </div>
+          
+          <!-- 日志列表 -->
+          <div class="card">
+            <div class="card-body p-0">
+              <table class="log-table">
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>打印时间</th>
+                    <th>打印人</th>
+                    <th>服务对象</th>
+                    <th>身份证号</th>
+                    <th>材料类型</th>
+                    <th>打印份数</th>
+                    <th>用途</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>2024-11-26 09:25:30</td>
+                    <td>档案管理员</td>
+                    <td>张三</td>
+                    <td>330623********1234</td>
+                    <td>评估结论书</td>
+                    <td>2份</td>
+                    <td>存档+医保提交</td>
+                    <td>
+                      <button class="btn btn-xs btn-outline-secondary">详情</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>2024-11-26 10:12:45</td>
+                    <td>档案管理员</td>
+                    <td>张三</td>
+                    <td>330623********1234</td>
+                    <td>服务协议</td>
+                    <td>2份</td>
+                    <td>存档+医保提交</td>
+                    <td>
+                      <button class="btn btn-xs btn-outline-secondary">详情</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>2024-11-26 14:30:15</td>
+                    <td>档案管理员</td>
+                    <td>李四</td>
+                    <td>330623********5678</td>
+                    <td>评估结论书</td>
+                    <td>1份</td>
+                    <td>存档</td>
+                    <td>
+                      <button class="btn btn-xs btn-outline-secondary">详情</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" onclick="exportPrintLog()">
+            <i class="fa fa-download"></i> 导出日志
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 引入Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // 标签页切换
+    document.getElementById('tab-conclusion').addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('tab-agreement').classList.remove('active');
+      document.getElementById('conclusion-section').style.display = 'block';
+      document.getElementById('agreement-section').style.display = 'none';
+      document.getElementById('batchPrintBtn').innerHTML = '<i class="fa fa-print"></i> 批量打印评估结论书';
+      document.getElementById('recordCount').innerHTML = '共 <strong>2</strong> 条可打印记录';
+    });
+
+    document.getElementById('tab-agreement').addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('tab-conclusion').classList.remove('active');
+      document.getElementById('conclusion-section').style.display = 'none';
+      document.getElementById('agreement-section').style.display = 'block';
+      document.getElementById('batchPrintBtn').innerHTML = '<i class="fa fa-print"></i> 批量打印服务协议';
+      document.getElementById('recordCount').innerHTML = '共 <strong>2</strong> 条可打印记录';
+    });
+
+    // 全选功能
+    document.getElementById('checkAllConclusion').addEventListener('change', function() {
+      const checkboxes = document.querySelectorAll('input[name="conclusionItem"]');
+      checkboxes.forEach(checkbox => {
+        if (!checkbox.disabled) {
+          checkbox.checked = this.checked;
+        }
+      });
+    });
+
+    document.getElementById('checkAllAgreement').addEventListener('change', function() {
+      const checkboxes = document.querySelectorAll('input[name="agreementItem"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    });
+
+    // 预览和打印功能
+    function previewConclusion(id) {
+      const modal = new bootstrap.Modal(document.getElementById('conclusionPreviewModal'));
+      modal.show();
+    }
+
+    function printConclusion(id) {
+      previewConclusion(id);
+      // 实际项目中记录打印日志
+    }
+
+    function printConclusionDocument() {
+      const copies = document.getElementById('conclusionCopies').value;
+      const purposes = [];
+      if (document.getElementById('purposeArchive1').checked) purposes.push('存档');
+      if (document.getElementById('purposeMedical1').checked) purposes.push('医保提交');
+      
+      alert(`已提交打印请求：评估结论书 ${copies} 份，用途：${purposes.join('+')}`);
+      // 实际项目中调用打印API并记录日志
+    }
+
+    function previewAgreement(id) {
+      const modal = new bootstrap.Modal(document.getElementById('agreementPreviewModal'));
+      modal.show();
+    }
+
+    function printAgreement(id) {
+      previewAgreement(id);
+      // 实际项目中记录打印日志
+    }
+
+    function printAgreementDocument() {
+      const copies = document.getElementById('agreementCopies').value;
+      const purposes = [];
+      if (document.getElementById('purposeArchive2').checked) purposes.push('存档');
+      if (document.getElementById('purposeMedical2').checked) purposes.push('医保提交');
+      
+      alert(`已提交打印请求：服务协议 ${copies} 份，用途：${purposes.join('+')}`);
+      // 实际项目中调用打印API并记录日志
+    }
+
+    // 打印日志功能
+    function openPrintLog() {
+      const modal = new bootstrap.Modal(document.getElementById('printLogModal'));
+      modal.show();
+    }
+
+    function exportPrintLog() {
+      alert('打印日志已导出为Excel文件');
+      // 实际项目中实现Excel导出功能
+    }
+
+    // 批量打印按钮事件
+    document.getElementById('batchPrintBtn').addEventListener('click', function() {
+      let selectedCount = 0;
+      let type = '';
+      
+      if (document.getElementById('tab-conclusion').classList.contains('active')) {
+        selectedCount = document.querySelectorAll('input[name="conclusionItem"]:checked').length;
+        type = '评估结论书';
+      } else {
+        selectedCount = document.querySelectorAll('input[name="agreementItem"]:checked').length;
+        type = '服务协议';
+      }
+      
+      if (selectedCount === 0) {
+        alert('请至少选择一项进行打印');
+        return;
+      }
+      
+      if (confirm(`确认批量打印选中的 ${selectedCount} 份${type}吗？`)) {
+        alert(`批量打印任务已提交：${selectedCount} 份${type}，默认2份（存档+医保提交）`);
+        // 实际项目中记录批量打印日志
+      }
+    });
+  </script>
+</body>
+</html>

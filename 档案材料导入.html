@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>档案管理平台 - 档案材料录入</title>
+  <!-- 引入外部资源 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  
+  <style>
+    /* 复用原有样式 */
+    body { font-family: "微软雅黑", "思源黑体", sans-serif; background-color: #f5f7fa; color: #333; margin: 0; padding: 0; }
+    .btn-primary { background-color: #1890FF; border-color: #1890FF; }
+    .btn-primary:hover { background-color: #096DD9; border-color: #096DD9; }
+    .btn-outline-secondary { border-color: #ddd; color: #666; }
+    .btn-outline-secondary:hover { background-color: #f5f5f5; border-color: #ccc; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-header { background: #fff; border-bottom: 1px solid #f0f0f0; border-radius: 12px 12px 0 0; padding: 15px 20px; font-weight: 600; font-size: 15px; }
+    .card-body { padding: 20px; }
+    .badge { font-size: 12px; }
+
+    /* 布局样式复用 */
+    .app-container { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #fff; box-shadow: 1px 0 2px rgba(0,0,0,0.05); padding: 20px 0; flex-shrink: 0; }
+    .sidebar-logo { text-align: center; padding: 0 20px 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; }
+    .sidebar-logo img { height: 40px; margin-bottom: 8px; }
+    .sidebar-logo h3 { font-size: 16px; color: #1890FF; font-weight: 600; margin: 0; }
+    .nav-menu { list-style: none; padding: 0; margin: 0; }
+    .nav-item { margin-bottom: 4px; }
+    .nav-link { display: flex; align-items: center; padding: 12px 20px; color: #666; text-decoration: none; font-size: 14px; border-left: 3px solid transparent; }
+    .nav-link:hover, .nav-link.active { color: #1890FF; background-color: #f0f7ff; border-left: 3px solid #1890FF; }
+    .nav-link i { font-size: 18px; margin-right: 12px; width: 20px; text-align: center; }
+    .nav-group-title { padding: 15px 20px 5px; font-size: 12px; color: #999; font-weight: 500; }
+
+    /* 主内容区复用+新增 */
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-title { font-size: 20px; font-weight: 600; color: #333; margin: 0; }
+    .user-info { display: flex; align-items: center; }
+    .notification { position: relative; margin-right: 20px; cursor: pointer; }
+    .notification i { font-size: 20px; color: #666; }
+    .notification-badge { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #FF4D4F; color: #fff; border-radius: 50%; font-size: 12px; text-align: center; line-height: 18px; }
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1890FF; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; margin-right: 10px; }
+    .user-name { font-size: 14px; font-weight: 500; }
+
+    /* 新增：录入页面样式 */
+    .upload-tabs { border-bottom: 1px solid #e8e8e8; margin-bottom: 20px; }
+    .upload-tab { padding: 10px 20px; cursor: pointer; font-weight: 500; color: #666; border-bottom: 2px solid transparent; display: inline-block; }
+    .upload-tab.active { color: #1890FF; border-bottom: 2px solid #1890FF; }
+    
+    .scan-config { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .config-group { margin-bottom: 15px; }
+    .config-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+    
+    .upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+    .upload-area:hover { border-color: #1890FF; background-color: #f0f7ff; }
+    .upload-area i { font-size: 36px; color: #ccc; margin-bottom: 10px; }
+    .upload-area p { color: #999; margin: 0; }
+    
+    .file-list { margin-top: 15px; }
+    .file-item { display: flex; align-items: center; padding: 10px; background: #fff; border-radius: 6px; margin-bottom: 8px; border: 1px solid #f0f0f0; }
+    .file-icon { width: 40px; height: 40px; background: #f0f7ff; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
+    .file-icon i { color: #1890FF; font-size: 20px; }
+    .file-info { flex: 1; }
+    .file-name { font-weight: 500; font-size: 14px; }
+    .file-size { font-size: 12px; color: #999; }
+    .file-status { margin-left: 10px; }
+    
+    .verify-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+    .verify-table th, .verify-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+    .verify-table th { background-color: #f8f9fa; font-weight: 600; font-size: 14px; }
+    .verify-table tbody tr:hover { background-color: #f9f9f9; }
+    .status-success { color: #52C41A; }
+    .status-error { color: #FF4D4F; }
+    
+    .action-buttons { display: flex; gap: 5px; }
+    .btn-xs { padding: 2px 8px; font-size: 12px; }
+    
+    .bottom-actions { display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边导航 -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <img src="https://via.placeholder.com/80x40?text=居家长护" alt="系统Logo">
+        <h3>档案管理平台</h3>
+      </div>
+      
+      <div class="nav-group-title">档案管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-search"></i>
+            <span>电子档案查询</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link active">
+            <i class="fa fa-camera"></i>
+            <span>档案材料录入</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-check-square-o"></i>
+            <span>档案合规检查</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="fa fa-download"></i>
+            <span>档案导出管理</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-group-title">系统管理</div>
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-user"></i><span>用户管理</span></a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-cog"></i><span>系统设置</span></a></li>
+      </ul>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 顶部导航 -->
+      <div class="top-nav">
+        <h1 class="page-title">档案材料录入</h1>
+        <div class="user-info">
+          <div class="notification">
+            <i class="fa fa-bell-o"></i>
+            <span class="notification-badge">2</span>
+          </div>
+          <div class="user-avatar">档</div>
+          <div class="user-name">档案管理员</div>
+        </div>
+      </div>
+
+      <!-- 录入方式标签页 -->
+      <div class="upload-tabs">
+        <div class="upload-tab active" id="tab-scan">扫描录入</div>
+        <div class="upload-tab" id="tab-upload">照片上传</div>
+      </div>
+
+      <!-- 扫描录入区域 -->
+      <div id="scan-section">
+        <div class="card">
+          <div class="card-header">扫描参数设置</div>
+          <div class="card-body">
+            <div class="scan-config">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="config-group">
+                    <label>扫描仪选择</label>
+                    <select class="form-select">
+                      <option value="">请选择已连接的扫描仪</option>
+                      <option value="scanner1">EPSON DS-530 (已连接)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="config-group">
+                    <label>扫描分辨率</label>
+                    <select class="form-select">
+                      <option value="200">200 DPI (默认)</option>
+                      <option value="300">300 DPI (推荐)</option>
+                      <option value="600">600 DPI (高清)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="config-group">
+                    <label>输出格式</label>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="format" id="format-jpg" checked>
+                      <label class="form-check-label" for="format-jpg">JPG</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="format" id="format-pdf">
+                      <label class="form-check-label" for="format-pdf">PDF</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="config-group">
+                    <label>扫描模式</label>
+                    <select class="form-select">
+                      <option value="color">彩色</option>
+                      <option value="gray">灰度</option>
+                      <option value="black">黑白</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="config-group">
+                    <label>自动识别二维码</label>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="auto-qrcode" checked>
+                      <label class="form-check-label" for="auto-qrcode">启用自动识别</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="config-group">
+                    <label>批量扫描</label>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="batch-scan">
+                      <label class="form-check-label" for="batch-scan">启用批量处理</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center">
+              <button class="btn btn-primary" id="startScanBtn">
+                <i class="fa fa-scanner"></i> 开始扫描
+              </button>
+              <button class="btn btn-outline-secondary ms-2">
+                <i class="fa fa-refresh"></i> 刷新扫描仪
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 照片上传区域（默认隐藏） -->
+      <div id="upload-section" style="display: none;">
+        <div class="card">
+          <div class="card-header">照片上传</div>
+          <div class="card-body">
+            <div class="upload-area" id="dropArea">
+              <i class="fa fa-cloud-upload"></i>
+              <p>点击或拖拽文件至此处上传</p>
+              <p class="mt-2">支持JPG、PNG、PDF格式，单文件不超过10MB</p>
+              <input type="file" id="fileInput" multiple accept=".jpg,.png,.pdf" style="display: none;">
+            </div>
+            
+            <div class="text-center mb-3">
+              <button class="btn btn-outline-secondary" id="selectFilesBtn">
+                <i class="fa fa-folder-open"></i> 选择文件
+              </button>
+              <button class="btn btn-primary ms-2" id="batchUploadBtn">
+                <i class="fa fa-upload"></i> 批量上传
+              </button>
+            </div>
+            
+            <div class="file-list" id="fileList">
+              <!-- 上传文件列表示例 -->
+              <div class="file-item">
+                <div class="file-icon"><i class="fa fa-file-image-o"></i></div>
+                <div class="file-info">
+                  <div class="file-name">服务计划_张三_202411.jpg</div>
+                  <div class="file-size">2.4MB</div>
+                </div>
+                <div class="file-status"><span class="badge bg-success">已选择</span></div>
+                <button class="btn btn-xs btn-outline-secondary ms-2"><i class="fa fa-times"></i></button>
+              </div>
+              <div class="file-item">
+                <div class="file-icon"><i class="fa fa-file-pdf-o"></i></div>
+                <div class="file-info">
+                  <div class="file-name">服务记录_李四_202410.pdf</div>
+                  <div class="file-size">1.8MB</div>
+                </div>
+                <div class="file-status"><span class="badge bg-success">已选择</span></div>
+                <button class="btn btn-xs btn-outline-secondary ms-2"><i class="fa fa-times"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 待校验材料列表 -->
+      <div class="card">
+        <div class="card-header">待校验材料列表</div>
+        <div class="card-body p-0">
+          <table class="verify-table">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>文件名</th>
+                <th>服务对象</th>
+                <th>材料类型</th>
+                <th>页码</th>
+                <th>识别状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>服务计划_张三_202411.jpg</td>
+                <td>张三（330623********1234）</td>
+                <td>服务计划</td>
+                <td>1/2</td>
+                <td><span class="status-success"><i class="fa fa-check-circle"></i> 识别成功</span></td>
+                <td class="action-buttons">
+                  <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#previewModal">预览</button>
+                  <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#manualLinkModal">手动关联</button>
+                  <button class="btn btn-xs btn-outline-danger">删除</button>
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>服务记录_李四_202410.pdf</td>
+                <td>-未识别-</td>
+                <td>-未识别-</td>
+                <td>-</td>
+                <td><span class="status-error"><i class="fa fa-times-circle"></i> 识别失败</span></td>
+                <td class="action-buttons">
+                  <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#previewModal">预览</button>
+                  <button class="btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#manualLinkModal">手动关联</button>
+                  <button class="btn btn-xs btn-outline-danger">删除</button>
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>服务记录_王五_202411.jpg</td>
+                <td>王五（330623********5678）</td>
+                <td>服务记录</td>
+                <td>2/2</td>
+                <td><span class="status-success"><i class="fa fa-check-circle"></i> 识别成功</span></td>
+                <td class="action-buttons">
+                  <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#previewModal">预览</button>
+                  <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#manualLinkModal">手动关联</button>
+                  <button class="btn btn-xs btn-outline-danger">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 底部操作按钮 -->
+      <div class="bottom-actions">
+        <button class="btn btn-outline-secondary">
+          <i class="fa fa-times"></i> 清空列表
+        </button>
+        <button class="btn btn-primary">
+          <i class="fa fa-check"></i> 确认归档
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 材料预览模态框 -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="previewModalLabel">材料预览 - 服务计划_张三_202411.jpg</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <img src="https://via.placeholder.com/800x600?text=材料预览图" alt="材料预览" class="img-fluid">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-outline-secondary">
+            <i class="fa fa-download"></i> 下载原图
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 手动关联模态框 -->
+  <div class="modal fade" id="manualLinkModal" tabindex="-1" aria-labelledby="manualLinkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="manualLinkModalLabel">手动关联材料</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">文件名</label>
+              <input type="text" class="form-control" value="服务记录_李四_202410.pdf" readonly>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">服务对象</label>
+              <select class="form-select">
+                <option value="">请选择服务对象</option>
+                <option value="1">李四（330623********5678）</option>
+                <option value="2">张三（330623********1234）</option>
+                <option value="3">王五（330623********9012）</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">材料类型</label>
+              <select class="form-select">
+                <option value="">请选择材料类型</option>
+                <option value="service_plan">服务计划</option>
+                <option value="service_record">服务记录</option>
+                <option value="evaluation">评估材料</option>
+                <option value="agreement">服务协议</option>
+              </select>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">页码</label>
+                <input type="text" class="form-control" placeholder="例如：1/2">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">备注</label>
+                <input type="text" class="form-control" placeholder="选填">
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary">确认关联</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 引入Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // 标签页切换
+    document.getElementById('tab-scan').addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('tab-upload').classList.remove('active');
+      document.getElementById('scan-section').style.display = 'block';
+      document.getElementById('upload-section').style.display = 'none';
+    });
+
+    document.getElementById('tab-upload').addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('tab-scan').classList.remove('active');
+      document.getElementById('scan-section').style.display = 'none';
+      document.getElementById('upload-section').style.display = 'block';
+    });
+
+    // 文件上传相关
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('fileInput');
+    const selectFilesBtn = document.getElementById('selectFilesBtn');
+    
+    selectFilesBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+    
+    dropArea.addEventListener('click', () => {
+      fileInput.click();
+    });
+    
+    // 拖拽上传
+    dropArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropArea.style.borderColor = '#1890FF';
+      dropArea.style.backgroundColor = '#f0f7ff';
+    });
+    
+    dropArea.addEventListener('dragleave', () => {
+      dropArea.style.borderColor = '#ddd';
+      dropArea.style.backgroundColor = '';
+    });
+    
+    dropArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropArea.style.borderColor = '#ddd';
+      dropArea.style.backgroundColor = '';
+      
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        // 这里可以添加文件处理逻辑
+      }
+    });
+    
+    // 开始扫描按钮效果
+    document.getElementById('startScanBtn').addEventListener('click', function() {
+      this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 扫描中...';
+      this.disabled = true;
+      
+      // 模拟扫描过程
+      setTimeout(() => {
+        this.innerHTML = '<i class="fa fa-scanner"></i> 开始扫描';
+        this.disabled = false;
+        alert('扫描完成！已识别到3份材料，请到待校验列表查看');
+      }, 3000);
+    });
+  </script>
+</body>
+</html>
